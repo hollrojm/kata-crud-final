@@ -35,6 +35,7 @@ const List = () =>{
 
 //Funcion pura entra misma salida, gestor que implementa la logica
 
+
 function reducer(state, action){
   switch (action, type){
     case'update-list':
@@ -61,7 +62,9 @@ const StoreProvider = ({children}) =>{
 }
 
 function App() {
-  return <di></di>
+  return <StoreProvider>
+    
+  </StoreProvider>
 }
 
 
