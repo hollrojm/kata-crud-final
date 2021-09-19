@@ -7,6 +7,19 @@ const initialState = {
 
 const Store = createContext(initialState)
 
+const Form =()=> {
+
+  return <form ref= {formRef}>
+    <input type="text" name="name" onChange={(event)=>{
+      setState({ ...state, name: event.target.value})
+    }}></input>
+    <input type="text" name="description" onChange={(event)=>{
+      setState({ ...state, description: event.target.value})
+    }}></input>
+    <button onClick={onAdd}>Agregar</button>
+  </form>
+
+}
 
 const List = () =>{
   //Almacen donde se guardan los estados internos de la app
