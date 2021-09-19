@@ -1,14 +1,26 @@
-import React, {useContext, useReducer} from 'react';
+import React, {useContext, useReducer, useEffect, createContext} from 'react';
 
 const HOST_API = "Http://localhost:8080/api";
 const initialState = {
   list:[]
-}
+};
 
-//Almacen donde se guardan los estados internos de la app
-const {dispach, state} = useContext(store);
+const Store = createContext(initialState)
+
 
 const List = () =>{
+  //Almacen donde se guardan los estados internos de la app
+    const {dispatch, state} = useContext(store);
+
+useEffect(()=>{
+
+  fetch(HOST_API + "/todos")
+  .then(response => response.json())
+  .then((list)=>{
+    dispatch({type: "update-list", list})
+  }, [state.list.length,dispatch]);
+
+})
   return <div>
     <table >
       <thead>
@@ -63,7 +75,7 @@ const StoreProvider = ({children}) =>{
 
 function App() {
   return <StoreProvider>
-    
+    <List />
   </StoreProvider>
 }
 
