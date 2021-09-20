@@ -1,96 +1,197 @@
-import React, {useContext, useReducer, useEffect, createContext} from 'react';
+import React, {
+  useContext,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  createContext,
+} from "react";
 
-const HOST_API = "Http://localhost:8080/api";
+const HOST_API = "http://localhost:8080/api/todo";
 const initialState = {
-  list:[]
+  list: [],
+  item: {},
+};
+const Store = createContext(initialState);
+
+const Form = () => {
+  //formRef nos permite identificar la referencia de un componente en especifico.
+  //Se inicializa en nulo, se inicializa cuando el componente es creado.
+  const formRef = useRef(null);
+  const {
+    dispatch,
+    state: { item },
+  } = useContext(Store);
+  //Permite tener estados internos dentro del componente
+  const [state, setState] = useState({ item });
+
+  const onAdd = (event) => {
+    event.preventDefault();
+
+    const request = {
+      name: state.name,
+      id: null,
+      isComplete: false,
+    };
+
+    fetch(HOST_API + "/todo", {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((todo) => {
+        dispatch({ type: "add-item", item: todo });
+        setState({ name: "" });
+        formRef.current.reset();
+      });
+  };
+
+  const onEdit = (event) => {
+    event.preventDefault();
+
+    const request = {
+      name: state.name,
+      id: item.id,
+      isComplete: item.isComplete,
+    };
+
+    fetch(HOST_API + "/todo", {
+      method: "PUT",
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((todo) => {
+        dispatch({ type: "update-item", item: todo });
+        setState({ name: "" });
+        formRef.current.reset();
+      });
+  };
+
+  return (
+    <form ref={formRef}>
+      <input
+        type="text"
+        name="name"
+        defaultValue={item.name}
+        onChange={(event) => {
+          setState({ ...state, name: event.target.value });
+        }}
+      ></input>
+      {item.id && <button onClick={onEdit}> Actualizar </button>}
+      {!item.id && <button onClick={onAdd}> Agregar </button>}
+    </form>
+  );
 };
 
-const Store = createContext(initialState)
+const List = () => {
+  const { dispatch, state } = useContext(Store);
 
-const Form =()=> {
+  useEffect(() => {
+    //El fetch es una forma de poder consultar algo por HTTP o cualquier recurso que este en la web
+    //El fetch es una promesa de Javascript que se necesita responder
+    fetch(HOST_API + "/todos")
+      .then((response) => response.json())
+      .then((list) => {
+        dispatch({ type: "update-list", list });
+      });
+  }, [state.list.lenght, dispatch]);
 
-  return <form ref= {formRef}>
-    <input type="text" name="name" onChange={(event)=>{
-      setState({ ...state, name: event.target.value})
-    }}></input>
-    <input type="text" name="description" onChange={(event)=>{
-      setState({ ...state, description: event.target.value})
-    }}></input>
-    <button onClick={onAdd}>Agregar</button>
-  </form>
+  const onDelete = (id) => {
+    fetch(HOST_API + "/" + id + "/todo", {
+      method: "DELETE",
+    }).then((list) => {
+      dispatch({ type: "delete-item", id });
+    });
+  };
 
-}
+  const onEdit = (todo) => {
+    dispatch({ type: "edit-item", item: todo });
+  };
 
-const List = () =>{
-  //Almacen donde se guardan los estados internos de la app
-    const {dispatch, state} = useContext(store);
-
-useEffect(()=>{
-
-  fetch(HOST_API + "/todos")
-  .then(response => response.json())
-  .then((list)=>{
-    dispatch({type: "update-list", list})
-  }, [state.list.length,dispatch]);
-
-})
-  return <div>
-    <table >
-      <thead>
-        <tr>
-          <td>ID</td>
-          <td>Tarea</td>
-          <td>¿Esta Completado?</td>
-        </tr>
-      </thead>
-      <tbody>
-        {currentList.map((todo) => {
-          return <tr key={todo.id} >
-            <td>{todo.id}</td>
-            <td>{todo.name}</td>
-            <td>{todo.isCompleted}</td>
-            <td><button onClick={() => onDelete(todo.id)}>Eliminar</button></td>
-            <td><button onClick={() => onEdit(todo)}>Editar</button></td>
+  return (
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <td>ID</td>
+            <td>Nombre</td>
+            <td>¿Esta completado?</td>
           </tr>
-        })}
-      </tbody>
-    </table>
-  </div>
-} 
+        </thead>
+        <tbody>
+          {state.list.map((todo) => {
+            return (
+              <tr key={todo.id}>
+                <td>{todo.id}</td>
+                <td>{todo.name}</td>
+                <td>{todo.isComplete === true ? "SI" : "NO"}</td>
+                <td>
+                  <button onClick={() => onDelete(todo.id)}> Eliminar</button>
+                </td>
+                <td>
+                  <button onClick={() => onEdit(todo)}> Editar</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
-//Funcion pura entra misma salida, gestor que implementa la logica
+//Reducer es una funcion pura. Dada una entrada siempre va a recibir la misma salida de esa entrada.
+function reducer(state, action) {
+  switch (action.type) {
+    case "update-item":
+      const listUpdateEdit = state.list.map((item) => {
+        if (item.id === action.item.id) {
+          return action.item;
+        }
+        return item;
+      });
+      return { ...state, list: listUpdateEdit, item: {} };
+    case "delete-item":
+      const listUpdate = state.list.filter((item) => {
+        return item.id !== action.id;
+      });
+      return { ...state, list: listUpdate };
 
-
-function reducer(state, action){
-  switch (action, type){
-    case'update-list':
-      return{...state, list: action.list}
-    case 'add-item':
+    case "update-list":
+      return { ...state, list: action.list };
+    case "edit-item":
+      return { ...state, item: action.item };
+    case "add-item":
       const newList = state.list;
       newList.push(action.item);
-      return{...state, list: newList}
+      return { ...state, list: newList };
     default:
       return state;
   }
 }
 
-//Conectar entre si diferentes componetes 
-const StoreProvider = ({children}) =>{
+//Proviver nos permite conectar diferentes componentes
+const StoreProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(reducer, initialState);
 
-  
- const [state, dispatch] = useReducer(reducer, initialState);
-
- return <Store.Provider value= {{state, dispach}}>
-   {children}
-</Store.Provider>
-
-}
+  return (
+    <Store.Provider value={{ state, dispatch }}>{children}</Store.Provider>
+  );
+};
 
 function App() {
-  return <StoreProvider>
-    <List />
-  </StoreProvider>
+  //El provider funciona como un contenedor de componentes
+  return (
+    <StoreProvider>
+      <Form />
+      <List />
+    </StoreProvider>
+  );
 }
-
-
 export default App;
